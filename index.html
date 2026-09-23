@@ -206,6 +206,13 @@ function previewCover(input) {
 }
 
 async function addBook() {
+ const botonGuardar = document.querySelector('.btn-save');
+
+if (botonGuardar.disabled) return;
+
+botonGuardar.disabled = true;
+botonGuardar.textContent = 'Guardando...';
+ 
   const title = document.getElementById('new-title').value.trim();
   const author = document.getElementById('new-author').value.trim();
   const summary = document.getElementById('new-summary').value.trim();
@@ -237,7 +244,9 @@ async function addBook() {
 
       render();
       resetForm();
-
+     
+      botonGuardar.disabled = false;
+      botonGuardar.textContent = 'Guardar';
       alert('Libro guardado correctamente.');
     };
 
@@ -251,6 +260,8 @@ async function addBook() {
     render();
     resetForm();
 
+   botonGuardar.disabled = false;
+   botonGuardar.textContent = 'Guardar';
     alert('Libro guardado correctamente.');
   }
 }
