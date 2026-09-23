@@ -89,9 +89,7 @@
 </div>
 
 <div id="vista-libros">
-  <div id="book-list">
-    <div class="loading">Cargando libros...</div>
-  </div>
+    <div id="book-list"></div>
 </div>
 
 <div id="vista-autores" style="display:none;">
@@ -122,8 +120,13 @@ const DEFAULT_BOOKS = [{"id": 1, "title": "El palacio de las ilusiones", "author
 const API_URL = "https://script.google.com/macros/s/AKfycby_mf2FIxJu0BnBRhI_OpCUM_5giMVaI5GMa3ixmV6muMXo2R1ehqYexvFG9AozEtfdfA/exec";
 
 let books = [];
-
+ 
 function loadBooks() {
+
+  // Mostrar inmediatamente los libros que ya tenemos
+  books = [...DEFAULT_BOOKS];
+  render();
+  
   const script = document.createElement('script');
 
   const callbackName = 'cargarLibros_' + Date.now();
