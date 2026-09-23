@@ -78,7 +78,25 @@
     <button class="btn-add" onclick="toggleForm()">+ Agregar libro</button>
   </div>
 
-  <div id="book-list"><div class="loading">Cargando libros...</div></div>
+  <div class="tabs">
+  <button class="tab-button active" onclick="mostrarPestana('libros')">
+    📚 Libros
+  </button>
+
+  <button class="tab-button" onclick="mostrarPestana('autores')">
+    👩‍💼 Por autor
+  </button>
+</div>
+
+<div id="vista-libros">
+  <div id="book-list">
+    <div class="loading">Cargando libros...</div>
+  </div>
+</div>
+
+<div id="vista-autores" style="display:none;">
+  <div id="author-list"></div>
+</div>
 
   <div class="add-form" id="add-form">
     <h3>Agregar nuevo libro</h3>
@@ -165,6 +183,76 @@ async function saveBooks() {
     console.error("Error al guardar el libro:", e);
   }
 }
+function renderAutores() {
+  const lista = document.getElementById('author-list');
+
+  const librosOrdenados = [...books].sort((a, b) =>
+    a.author.localeCompare(b.author, 'es', { sensitivity: 'base' })
+  );
+
+  lista.innerHTML = '';
+
+  librosOrdenados.forEach((b, i) => {
+
+    const numeroOriginal = books.indexOf(b) + 1;
+
+    const card = document.createElement('div');
+    card.className = 'book-card';
+
+    card.innerHTML = `
+      <div class="book-header">
+        <span class="book-num">${numeroOriginal}</span>
+
+        <img
+          class="book-cover"
+          src="${b.coverData || ''}"
+          alt="portada"
+          onerror="this.style.display='none'"
+        >
+
+        <div class="book-meta">
+          <div class="book-title">${b.title}</div>
+          <div class="book-author">${b.author}</div>
+        </div>
+      </div>
+
+      ${b.summary ? `<div class="book-summary">${b.summary}</div>` : ''}
+    `;
+
+    lista.appendChild(card);
+  });
+}
+
+
+function mostrarPestana(pestana) {
+
+  const vistaLibros = document.getElementById('vista-libros');
+  const vistaAutores = document.getElementById('vista-autores');
+
+  const botones = document.querySelectorAll('.tab-button');
+
+  botones.forEach(boton => {
+    boton.classList.remove('active');
+  });
+
+  if (pestana === 'libros') {
+
+    vistaLibros.style.display = 'block';
+    vistaAutores.style.display = 'none';
+
+    botones[0].classList.add('active');
+
+  } else {
+
+    vistaLibros.style.display = 'none';
+    vistaAutores.style.display = 'block';
+
+    botones[1].classList.add('active');
+
+    renderAutores();
+  }
+}
+
 
 function render() {
   const list = document.getElementById('book-list');
