@@ -92,6 +92,82 @@
   color: #1f4e79;
   border-bottom: 3px solid #c5a46d;
 }
+
+.list-subtitle { color:#1a2a5e; font-size:18px; font-weight:700; margin:0 0 12px; }
+.list-item {
+  background: #fff;
+  border: 1px solid #e0d8cc;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.list-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.09);
+}
+.list-number {
+  min-width: 28px;
+  color: #1a2a5e;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.list-text {
+  flex: 1;
+  color: #1a1a2e;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.list-arrow {
+  color: #c5a46d;
+  font-size: 18px;
+}
+.btn-back {
+  background: transparent;
+  border: none;
+  color: #1a2a5e;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+.detail-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e0d8cc;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.detail-cover {
+  display: block;
+  width: 150px;
+  max-width: 55%;
+  height: 210px;
+  object-fit: cover;
+  margin: 22px auto 14px;
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.detail-content { padding: 0 20px 22px; text-align: center; }
+.detail-number { color: #1a2a5e; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.detail-title { color: #1a1a2e; font-size: 22px; font-weight: 700; line-height: 1.3; }
+.detail-author { color: #c47a20; font-size: 16px; font-style: italic; margin-top: 5px; }
+.detail-summary { color: #444; font-size: 14px; line-height: 1.7; text-align: left; margin-top: 18px; padding-top: 16px; border-top: 1px solid #f0e8dc; }
+.detail-genres { color: #777; font-size: 12px; margin-top: 14px; line-height: 1.5; }
+@media (max-width: 520px) {
+  .tabs { overflow-x: auto; justify-content: flex-start; }
+  .tab-button { min-width: 112px; padding: 11px 8px; font-size: 14px; }
+  .detail-title { font-size: 20px; }
+}
 </style>
 </head>
 <body>
@@ -109,27 +185,33 @@
   </div>
 
   <div class="tabs">
-  <button class="tab-button active" onclick="mostrarPestana('libros')">
-    📚 Libros
-  </button>
-
-  <button class="tab-button" onclick="mostrarPestana('autores')">
-    👩‍💼 Por autor
-  </button>
+  <button class="tab-button active" onclick="mostrarPestana('libros')">📚 Libros</button>
+  <button class="tab-button" onclick="mostrarPestana('autores')">👩‍💼 Por autor</button>
+  <button class="tab-button" onclick="mostrarPestana('generos')">🏷️ Género</button>
 </div>
 
 <div id="vista-libros">
-    <div id="book-list"></div>
+  <div id="book-list"></div>
 </div>
 
 <div id="vista-autores" style="display:none;">
   <div id="author-list"></div>
 </div>
 
+<div id="vista-generos" style="display:none;">
+  <div id="genre-list"></div>
+</div>
+
+<div id="vista-detalle" style="display:none;">
+  <button class="btn-back" onclick="volverALista()">← Volver</button>
+  <div id="book-detail"></div>
+</div>
+
   <div class="add-form" id="add-form">
     <h3>Agregar nuevo libro</h3>
     <input type="text" id="new-title" placeholder="Título del libro">
     <input type="text" id="new-author" placeholder="Autor">
+    <input type="text" id="new-genre" placeholder="Género (puedes escribir más de uno, separados por coma)">
     <div class="cover-row">
       <img class="cover-preview" id="cover-preview" alt="portada">
       <input type="file" id="new-cover" accept="image/*" onchange="previewCover(this)">
@@ -167,7 +249,8 @@ function loadBooks() {
       title: libro.titulo,
       author: libro.autor,
       summary: libro.resumen,
-      coverData: libro.portada
+      coverData: libro.portada,
+      genres: libro.generos || libro.genero || GENEROS_POR_TITULO[libro.titulo] || []
     }));
 
     render();
@@ -200,7 +283,8 @@ async function saveBooks() {
       titulo: libro.title,
       autor: libro.author,
       resumen: libro.summary,
-      portada: libro.coverData || ""
+      portada: libro.coverData || "",
+      generos: libro.genres || []
     };
 
     await fetch(API_URL, {
@@ -216,98 +300,205 @@ async function saveBooks() {
     console.error("Error al guardar el libro:", e);
   }
 }
-function renderAutores() {
-  const lista = document.getElementById('author-list');
+const GENEROS = [
+  "Desarrollo personal",
+  "Ficción",
+  "Ficción histórica",
+  "Novela histórica",
+  "Novela juvenil",
+  "Romance",
+  "No ficción"
+];
 
-  const librosOrdenados = [...books].sort((a, b) =>
-    a.author.localeCompare(b.author, 'es', { sensitivity: 'base' })
-  );
+const GENEROS_POR_TITULO = {
+  "El palacio de las ilusiones": ["Ficción", "Ficción histórica", "Novela histórica"],
+  "El país de las mujeres": ["Ficción", "Romance"],
+  "Mirar de nuevo": ["Desarrollo personal"],
+  "Travesuras de la niña mala": ["Ficción", "Romance"],
+  "Los genios": ["Ficción"],
+  "El amante de Lady Chatterley": ["Ficción", "Romance"],
+  "El círculo de las mujeres de la doctora Tan": ["Ficción", "Ficción histórica", "Novela histórica"],
+  "La otra Isabel": ["Ficción", "Ficción histórica", "Novela histórica"],
+  "A donde van las mariposas": ["Ficción", "Novela juvenil", "Romance"],
+  "La vida tiene un plan perfecto para ti": ["Ficción", "Desarrollo personal"],
+  "Un caballero en Moscú": ["Ficción", "Ficción histórica", "Novela histórica"],
+  "Por si un día volvemos": ["Ficción", "Ficción histórica", "Novela histórica"],
+  "Deja de ser tú": ["Desarrollo personal"],
+  "Los dueños del Norte": ["No ficción"],
+  "Matilde": ["Ficción", "Ficción histórica", "Novela histórica"]
+};
 
-  lista.innerHTML = '';
+let vistaAnterior = 'libros';
+let contextoAnterior = null;
 
-  librosOrdenados.forEach((b, i) => {
-
-    const numeroOriginal = books.indexOf(b) + 1;
-
-    const card = document.createElement('div');
-    card.className = 'book-card';
-
-    card.innerHTML = `
-      <div class="book-header">
-        <span class="book-num">${numeroOriginal}</span>
-
-        <img
-          class="book-cover"
-          src="${b.coverData || ''}"
-          alt="portada"
-          onerror="this.style.display='none'"
-        >
-
-        <div class="book-meta">
-          <div class="book-title">${b.title}</div>
-          <div class="book-author">${b.author}</div>
-        </div>
-      </div>
-
-      ${b.summary ? `<div class="book-summary">${b.summary}</div>` : ''}
-    `;
-
-    lista.appendChild(card);
-  });
+function obtenerGeneros(libro) {
+  if (Array.isArray(libro.genres) && libro.genres.length) return libro.genres;
+  if (libro.genre) return String(libro.genre).split(',').map(x => x.trim()).filter(Boolean);
+  return GENEROS_POR_TITULO[libro.title] || [];
 }
 
-
-function mostrarPestana(pestana) {
-
-  const vistaLibros = document.getElementById('vista-libros');
-  const vistaAutores = document.getElementById('vista-autores');
-
-  const botones = document.querySelectorAll('.tab-button');
-
-  botones.forEach(boton => {
-    boton.classList.remove('active');
-  });
-
-  if (pestana === 'libros') {
-
-    vistaLibros.style.display = 'block';
-    vistaAutores.style.display = 'none';
-
-    botones[0].classList.add('active');
-
-  } else {
-
-    vistaLibros.style.display = 'none';
-    vistaAutores.style.display = 'block';
-
-    botones[1].classList.add('active');
-
-    renderAutores();
-  }
+function mostrarListaItem(numero, texto, accion) {
+  const item = document.createElement('div');
+  item.className = 'list-item';
+  item.onclick = accion;
+  item.innerHTML = `
+    <span class="list-number">${String(numero).padStart(2, '0')}</span>
+    <span class="list-text">${texto}</span>
+    <span class="list-arrow">›</span>
+  `;
+  return item;
 }
-
 
 function render() {
   const list = document.getElementById('book-list');
   const count = document.getElementById('book-count');
   count.textContent = books.length + ' libros';
   list.innerHTML = '';
+
   books.forEach((b, i) => {
-    const card = document.createElement('div');
-    card.className = 'book-card';
-    card.innerHTML = `
-      <div class="book-header">
-        <span class="book-num">${i+1}</span>
-        <img class="book-cover" src="${b.coverData || ''}" alt="portada" onerror="this.style.display='none'">
-        <div class="book-meta">
-          <div class="book-title">${b.title}</div>
-          <div class="book-author">${b.author}</div>
-        </div>
-      </div>
-      ${b.summary ? `<div class="book-summary">${b.summary}</div>` : ''}
-    `;
-    list.appendChild(card);
+    list.appendChild(mostrarListaItem(i + 1, b.title, () => mostrarDetalle(b, 'libros')));
   });
+}
+
+function renderAutores() {
+  const lista = document.getElementById('author-list');
+  const autores = [...new Set(books.map(b => b.author).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  lista.innerHTML = '';
+  autores.forEach((autor, i) => {
+    lista.appendChild(mostrarListaItem(i + 1, autor, () => mostrarLibrosDeAutor(autor)));
+  });
+}
+
+function renderGeneros() {
+  const lista = document.getElementById('genre-list');
+  lista.innerHTML = '';
+  GENEROS.forEach((genero, i) => {
+    lista.appendChild(mostrarListaItem(i + 1, genero, () => mostrarLibrosDeGenero(genero)));
+  });
+}
+
+function mostrarLibrosDeAutor(autor) {
+  vistaAnterior = 'autores';
+  contextoAnterior = { tipo: 'autor', valor: autor };
+  mostrarSublista(`Libros de ${autor}`, books.filter(b => b.author === autor));
+}
+
+function mostrarLibrosDeGenero(genero) {
+  vistaAnterior = 'generos';
+  contextoAnterior = { tipo: 'genero', valor: genero };
+  const libros = books.filter(b => obtenerGeneros(b).includes(genero));
+  mostrarSublista(genero, libros);
+}
+
+function mostrarSublista(titulo, libros) {
+  const vistaLibros = document.getElementById('vista-libros');
+  const vistaAutores = document.getElementById('vista-autores');
+  const vistaGeneros = document.getElementById('vista-generos');
+  const detalle = document.getElementById('vista-detalle');
+
+  vistaLibros.style.display = 'none';
+  vistaAutores.style.display = 'none';
+  vistaGeneros.style.display = 'none';
+  detalle.style.display = 'block';
+
+  document.getElementById('book-detail').innerHTML = `
+    <div class="list-subtitle">${titulo}</div>
+    <div id="sublist"></div>
+  `;
+
+  const sublist = document.getElementById('sublist');
+  libros.forEach(b => {
+    const numeroOriginal = books.indexOf(b) + 1;
+    sublist.appendChild(mostrarListaItem(numeroOriginal, b.title, () => mostrarDetalle(b, vistaAnterior, contextoAnterior)));
+  });
+
+  if (!libros.length) {
+    sublist.innerHTML = '<div class="loading">No hay libros en esta categoría.</div>';
+  }
+}
+
+function mostrarDetalle(libro, origen = 'libros', contexto = null) {
+  vistaAnterior = origen;
+  contextoAnterior = contexto;
+
+  document.getElementById('vista-libros').style.display = 'none';
+  document.getElementById('vista-autores').style.display = 'none';
+  document.getElementById('vista-generos').style.display = 'none';
+  document.getElementById('vista-detalle').style.display = 'block';
+
+  const numero = books.indexOf(libro) + 1;
+  const generos = obtenerGeneros(libro);
+  const cover = libro.coverData || '';
+
+  document.getElementById('book-detail').innerHTML = `
+    <div class="detail-card">
+      ${cover ? `<img class="detail-cover" src="${cover}" alt="Portada de ${libro.title}" onerror="this.style.display='none'">` : ''}
+      <div class="detail-content">
+        <div class="detail-number">${String(numero).padStart(2, '0')}</div>
+        <div class="detail-title">${libro.title}</div>
+        <div class="detail-author">${libro.author}</div>
+        ${libro.summary ? `<div class="detail-summary">${libro.summary}</div>` : ''}
+        ${generos.length ? `<div class="detail-genres"><strong>Género:</strong> ${generos.join(' · ')}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function volverALista() {
+  document.getElementById('vista-detalle').style.display = 'none';
+  const botones = document.querySelectorAll('.tab-button');
+
+  if (vistaAnterior === 'libros') {
+    mostrarPestana('libros');
+  } else if (vistaAnterior === 'autores') {
+    if (contextoAnterior && contextoAnterior.tipo === 'autor') {
+      mostrarPestana('autores');
+      mostrarLibrosDeAutor(contextoAnterior.valor);
+    } else {
+      mostrarPestana('autores');
+    }
+  } else {
+    if (contextoAnterior && contextoAnterior.tipo === 'genero') {
+      mostrarPestana('generos');
+      mostrarLibrosDeGenero(contextoAnterior.valor);
+    } else {
+      mostrarPestana('generos');
+    }
+  }
+}
+
+function mostrarPestana(pestana) {
+  const vistas = {
+    libros: document.getElementById('vista-libros'),
+    autores: document.getElementById('vista-autores'),
+    generos: document.getElementById('vista-generos'),
+    detalle: document.getElementById('vista-detalle')
+  };
+
+  Object.values(vistas).forEach(v => v.style.display = 'none');
+  const botones = document.querySelectorAll('.tab-button');
+  botones.forEach(boton => boton.classList.remove('active'));
+
+  if (pestana === 'libros') {
+    vistas.libros.style.display = 'block';
+    botones[0].classList.add('active');
+    vistaAnterior = 'libros';
+    contextoAnterior = null;
+  } else if (pestana === 'autores') {
+    vistas.autores.style.display = 'block';
+    botones[1].classList.add('active');
+    vistaAnterior = 'autores';
+    contextoAnterior = null;
+    renderAutores();
+  } else {
+    vistas.generos.style.display = 'block';
+    botones[2].classList.add('active');
+    vistaAnterior = 'generos';
+    contextoAnterior = null;
+    renderGeneros();
+  }
 }
 
 function toggleForm() {
@@ -337,10 +528,14 @@ botonGuardar.textContent = 'Guardando...';
   const title = document.getElementById('new-title').value.trim();
   const author = document.getElementById('new-author').value.trim();
   const summary = document.getElementById('new-summary').value.trim();
+  const genreText = document.getElementById('new-genre').value.trim();
+  const genres = genreText.split(',').map(x => x.trim()).filter(Boolean);
   const coverInput = document.getElementById('new-cover');
 
   if (!title || !author) {
     alert('Por favor ingresa título y autor.');
+    botonGuardar.disabled = false;
+    botonGuardar.textContent = 'Guardar';
     return;
   }
 
@@ -349,7 +544,8 @@ botonGuardar.textContent = 'Guardando...';
     title: title,
     author: author,
     summary: summary,
-    coverData: ''
+    coverData: '',
+    genres: genres
   };
 
   // Si hay portada, convertirla a imagen
@@ -390,6 +586,7 @@ function resetForm() {
   document.getElementById('new-title').value = '';
   document.getElementById('new-author').value = '';
   document.getElementById('new-summary').value = '';
+  document.getElementById('new-genre').value = '';
   document.getElementById('new-cover').value = '';
   document.getElementById('cover-preview').style.display = 'none';
   toggleForm();
